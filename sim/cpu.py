@@ -1,6 +1,6 @@
+from sim.bus import Bus
 from sim.decoder import decode_fields, imm_i, imm_s, imm_b, imm_u, imm_j, sign_extend
 from sim.registers import RegisterFile
-from sim.memory import Memory
 from sim.ula import ula
 
 R_OPS = {
@@ -66,13 +66,12 @@ def execute_jalr(rf: RegisterFile, pc: int, word: int) -> int:
     rf.write(f["rd"], pc + 4)
     return target
 
-# Ligue no step: opcode 0000011 chama execute_load, e 0100011 chama execute_s.
-def execute_load(rf: RegisterFile, mem: Memory, word: int) -> None:
+def execute_load(rf: RegisterFile, mem: Bus, word: int) -> None:
     f = decode_fields(word)
     addr = (rf.read(f["rs1"]) + imm_i(word)) & 0xFFFFFFFF
     rf.write(f["rd"], mem.read_word(addr))
 
-def execute_s(rf: RegisterFile, mem: Memory, word: int) -> None:
+def execute_s(rf: RegisterFile, mem: Bus, word: int) -> None:
     f = decode_fields(word)
     addr = (rf.read(f["rs1"]) + imm_s(word)) & 0xFFFFFFFF
     mem.write_word(addr, rf.read(f["rs2"]))
@@ -100,8 +99,15 @@ def execute_b(rf: RegisterFile, pc: int, word: int) -> int:
         return (pc + imm_b(word)) & 0xFFFFFFFF
     return pc + 4
 
+def execute_swap(rf: RegisterFile, word: int) -> None:
+    f = decode_fields(word)
+    a = rf.read(f["rs1"])
+    b = rf.read(f["rs2"])
+    rf.write(f["rs1"], b)
+    rf.write(f["rs2"], a)
+
 class CPU:
-    def __init__(self, mem: Memory) -> None:
+    def __init__(self, mem: Bus) -> None:
         self.rf = RegisterFile()
         self.mem = mem
         self.pc = 0
@@ -126,6 +132,8 @@ class CPU:
             next_pc = execute_jal(self.rf, self.pc, word)
         elif opcode == 0b1100111:
             next_pc = execute_jalr(self.rf, self.pc, word)
+        elif opcode == 0b0001011:
+            execute_swap(self.rf, word)
         else:
             raise ValueError(f"opcode não suportado: {opcode:#09b}")
         self.pc = next_pc & 0xFFFFFFFF       # 3. atualiza o PC

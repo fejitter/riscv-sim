@@ -1,6 +1,7 @@
 from sim.cpu import CPU, execute_r, execute_i
 from sim.registers import RegisterFile
 from sim.memory import Memory
+from sim.bus import Bus
 
 def test_add_executes():
     rf = RegisterFile()
@@ -124,3 +125,36 @@ def test_jalr_rd_equals_rs1():
     cpu.step()
     assert cpu.pc == 0x20
     assert cpu.rf.read(1) == 4
+
+def test_swap_basic():
+    m = Memory(); cpu = CPU(m)
+    cpu.rf.write(1, 10)
+    cpu.rf.write(2, 20)
+    m.write_word(0, 0x0020800B)   # swap x1, x2
+    cpu.step()
+    assert cpu.rf.read(1) == 20
+    assert cpu.rf.read(2) == 10
+    assert cpu.pc == 4
+
+def test_swap_same_register():
+    m = Memory(); cpu = CPU(m)
+    cpu.rf.write(1, 7)
+    m.write_word(0, 0x0010800B)   # swap x1, x1
+    cpu.step()
+    assert cpu.rf.read(1) == 7
+
+def test_swap_with_x0():
+    m = Memory(); cpu = CPU(m)
+    cpu.rf.write(5, 99)
+    m.write_word(0, 0x0050000B)   # swap x0, x5
+    cpu.step()
+    assert cpu.rf.read(0) == 0    # x0 continua zero
+    assert cpu.rf.read(5) == 0
+
+def test_cpu_through_bus():
+    bus = Bus()
+    bus.attach(0x00000, 0x7FFFF, Memory(0x80000))
+    bus.write_word(0, 0x00500093)   # addi x1, x0, 5
+    cpu = CPU(bus)
+    cpu.step()
+    assert cpu.rf.read(1) == 5

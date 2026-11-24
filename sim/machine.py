@@ -2,14 +2,17 @@ from sim.bus import Bus
 from sim.cpu import CPU
 from sim.memory import Memory
 from sim.vram import Vram
+from sim.perifericos import Perifericos
 
 class Machine:
     def __init__(self, n: int = 100) -> None:
         self.ram = Memory(0x80000)
         self.vram = Vram()
+        self.per = Perifericos()
         self.bus = Bus()
         self.bus.attach(0x00000, 0x7FFFF, self.ram)
         self.bus.attach(0x80000, 0x8FFFF, self.vram)
+        self.bus.attach(0x9FC00, 0x9FFFF, self.per)
         self.cpu = CPU(self.bus)
         self.n = n
 

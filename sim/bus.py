@@ -1,6 +1,8 @@
 class Bus:
     def __init__(self) -> None:
-        self.devices = []   # lista de (inicio, fim, dispositivo)
+        self.devices = []   
+        self.trace = False  
+        self.log = []       
 
     def attach(self, start: int, end: int, device) -> None:
         self.devices.append((start, end, device))
@@ -13,8 +15,16 @@ class Bus:
 
     def read_word(self, addr: int) -> int:
         start, dev = self._find(addr)
-        return dev.read_word(addr - start)   # endereço relativo ao dispositivo
+        value = dev.read_word(addr - start)
+        if self.trace:
+            self.log.append(("READ", addr, value))
+        return value
 
     def write_word(self, addr: int, value: int) -> None:
         start, dev = self._find(addr)
         dev.write_word(addr - start, value)
+        if self.trace:
+            self.log.append(("WRITE", addr, value & 0xFFFFFFFF))
+
+
+# log fica desligado por padrão para não crescer sem limite em programas longos
